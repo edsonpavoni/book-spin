@@ -98,10 +98,12 @@
     </div>
     <div class="row">
       <label><span>Cover gloss</span><input type="range" id="gloss" min="0" max="1" step="0.05" value="0.25"></label>
+      <label><span>Shadow <b id="shadowV">100%</b></span><input type="range" id="shadow" min="0" max="1" step="0.05" value="1"></label>
     </div>
 
     <div class="out">
       <button id="dl">Download HTML</button>
+      <button class="ghost" id="reset" title="Settings back to the defaults; the covers stay">Reset</button>
       <button class="ghost" id="copy">Copy embed</button>
     </div>
     <p class="note">The HTML file holds everything (images inside), transparent background: open it, or drop it in an iframe. The embed uses your own image URLs.</p>
@@ -184,13 +186,14 @@
 
   function attrs() {
     const a = { pages: $("#pages").value, edge: edge === "custom" ? $("#custom").value : edge, tilt: $("#tilt").value,
-      camera: $("#camera").value, speed: $("#speed").value, gloss: $("#gloss").value };
+      camera: $("#camera").value, speed: $("#speed").value, gloss: $("#gloss").value, shadow: $("#shadow").value };
     if ($("#paper").value !== "0.1") a.paper = $("#paper").value;
     if ($("#trim").value.trim()) a.trim = $("#trim").value.trim();
     return a;
   }
   let t;
   function update() {
+    $("#shadowV").textContent = Math.round($("#shadow").value * 100) + "%";
     $("#tiltV").textContent = $("#tilt").value + "°"; $("#cameraV").textContent = $("#camera").value + "°";
     const mm = $("#pages").value / 2 * $("#paper").value + 0.6;
     $("#thick").textContent = `About ${mm.toFixed(1)} mm thick.`;
@@ -220,6 +223,14 @@
     const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
     Object.assign(document.createElement("a"), { href: url, download: "book-spin.html" }).click();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+  });
+
+  // reset: every setting back to its default (the covers stay)
+  $("#reset").addEventListener("click", () => {
+    document.querySelectorAll("aside input:not([type=file])").forEach((i) => (i.value = i.defaultValue));
+    $("#customDot").style.background = $("#custom").value;
+    edge = "white"; document.querySelectorAll("#edges button").forEach((x) => x.setAttribute("aria-pressed", x.dataset.e === "white"));
+    update();
   });
 
   update();
