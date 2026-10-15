@@ -4,7 +4,7 @@ A book standing on one corner, turning on its axis, on a transparent background 
 
 **Tool:** open `index.html` (or the GitHub Pages link) → upload the covers → **Download HTML** (one self-contained file, images inside) or **Copy embed**.
 
-No three.js, no WebGL: a CSS 3D box in a 4 KB (gzipped) web component with no dependencies. The light on each face is computed once and baked into CSS keyframes, so nothing runs per frame. It pauses when off screen and holds still for visitors who ask for reduced motion.
+No three.js, no WebGL: a CSS 3D box in a 5 KB (gzipped) web component with no dependencies. The light on each face is computed once and baked into CSS keyframes, so nothing runs per frame. It pauses when off screen and holds still for visitors who ask for reduced motion.
 
 ## Embed
 
