@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Page edges · Book Spin</title>
+<style>body{margin:0;padding:24px;background:#f4f2ee;font:14px/1.4 system-ui,sans-serif;color:#222}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;max-width:1100px;margin:auto}
+figure{margin:0;text-align:center}book-spin{display:block;width:100%;aspect-ratio:1}code{font-size:13px}</style>
+<!-- The same book with each edge finish, and thin vs thick. -->
+<div class="grid">
+  <figure><book-spin front="../demo/book2-front.webp" spine="../demo/book2-spine.webp" back="../demo/book2-back.webp" edge="white" pages="120"></book-spin><figcaption><code>edge="white" pages="120"</code></figcaption></figure>
+  <figure><book-spin front="../demo/book2-front.webp" spine="../demo/book2-spine.webp" back="../demo/book2-back.webp" edge="cream" pages="280"></book-spin><figcaption><code>edge="cream"</code></figcaption></figure>
+  <figure><book-spin front="../demo/book2-front.webp" spine="../demo/book2-spine.webp" back="../demo/book2-back.webp" edge="gold" pages="280"></book-spin><figcaption><code>edge="gold"</code></figcaption></figure>
+  <figure><book-spin front="../demo/book2-front.webp" spine="../demo/book2-spine.webp" back="../demo/book2-back.webp" edge="silver" pages="280"></book-spin><figcaption><code>edge="silver"</code></figcaption></figure>
+  <figure><book-spin front="../demo/book2-front.webp" spine="../demo/book2-spine.webp" back="../demo/book2-back.webp" edge="black" pages="280"></book-spin><figcaption><code>edge="black"</code></figcaption></figure>
+  <figure><book-spin front="../demo/book2-front.webp" spine="../demo/book2-spine.webp" back="../demo/book2-back.webp" edge="#d33" pages="480"></book-spin><figcaption><code>edge="#d33" pages="480"</code></figcaption></figure>
+</div>
+<script src="../book-spin.js"></script>
+</html>
