@@ -36,6 +36,15 @@
   .out { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
   .out button { padding: 9px 14px; border-radius: 6px; border: 1px solid var(--fg); background: var(--fg); color: var(--bg); font: inherit; font-size: 14px; cursor: pointer; }
   .out button.ghost { background: transparent; color: var(--fg); }
+  .lightrow { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: center; }
+  .lightrow .note { margin: 0; }
+  .pad { position: relative; width: 112px; height: 112px; border-radius: 50%; border: 1px solid var(--line); cursor: crosshair; touch-action: none;
+    background: radial-gradient(circle, color-mix(in srgb, var(--fg) 8%, transparent) 0 18%, transparent 19%), var(--bg); }
+  .pad:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .pad i { position: absolute; display: block; pointer-events: none; }
+  .pad-book { left: 50%; top: 50%; width: 16px; height: 4px; margin: -2px 0 0 -8px; background: var(--fg); border-radius: 1px; }
+  .pad-you { left: 50%; bottom: -18px; transform: translateX(-50%); font-size: 10px; font-style: normal; color: var(--mute); }
+  .pad-sun { width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #f5c542; box-shadow: 0 0 0 3px rgb(245 197 66 / .3), 0 0 12px #f5c542; }
   pre { margin-top: 14px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font: 11.5px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-all; color: var(--mute); }
   section { position: sticky; top: 0; height: 100vh; display: grid; grid-template-rows: auto 1fr; }
   .bar { display: flex; justify-content: flex-end; gap: 6px; padding: 14px 18px; }
@@ -96,6 +105,15 @@
       <label><span>Lean <b id="tiltV">35°</b></span><input type="range" id="tilt" min="0" max="60" value="35"></label>
       <label><span>Camera <b id="cameraV">10°</b></span><input type="range" id="camera" min="0" max="30" value="10"></label>
     </div>
+    <fieldset>
+      <legend>Light <b id="lightV"></b></legend>
+      <div class="lightrow">
+        <div class="pad" id="pad" role="slider" tabindex="0" aria-label="Light direction and height (arrow keys)">
+          <i class="pad-book"></i><i class="pad-you">you</i><i class="pad-sun" id="sun"></i>
+        </div>
+        <p class="note">Seen from above: drag the light around the book. The centre is straight overhead, the edge is low on the horizon. The shadow falls the other way.</p>
+      </div>
+    </fieldset>
     <div class="row">
       <label><span>Cover gloss</span><input type="range" id="gloss" min="0" max="1" step="0.05" value="0.25"></label>
       <label><span>Shadow</span><input type="range" id="shadow" min="0" max="1" step="0.05" value="1"></label>
@@ -127,6 +145,7 @@
   const book = $("#book");
   const imgs = { front: null, spine: null, back: null };   // data URLs
   let edge = "white";
+  const light = { az: -40, el: 50 };     // direction (0 = from you, -90 = left) and height (90 = overhead)
 
   // a placeholder cover until one is uploaded
   function placeholder(w, h, bg, fg, lines) {
@@ -185,13 +204,17 @@
 
   function attrs() {
     const a = { pages: $("#pages").value, edge: edge === "custom" ? $("#custom").value : edge, tilt: $("#tilt").value,
-      camera: $("#camera").value, speed: $("#speed").value, gloss: $("#gloss").value, shadow: $("#shadow").value };
+      camera: $("#camera").value, light: `${light.az},${light.el}`, speed: $("#speed").value, gloss: $("#gloss").value, shadow: $("#shadow").value };
     if ($("#paper").value !== "0.1") a.paper = $("#paper").value;
     if ($("#trim").value.trim()) a.trim = $("#trim").value.trim();
     return a;
   }
   let t;
   function update() {
+    const R = 56, r = (90 - light.el) / 90 * R, a = light.az * Math.PI / 180;
+    Object.assign($("#sun").style, { left: `${56 + Math.sin(a) * r}px`, top: `${56 + Math.cos(a) * r}px` });
+    const A = Math.abs(light.az), side = light.az < 0 ? "left" : "right";
+    $("#lightV").textContent = `· ${light.el >= 85 ? "overhead" : A <= 20 ? "front" : A >= 160 ? "behind" : A < 70 ? "front " + side : A > 110 ? "back " + side : side}${light.el >= 85 ? "" : `, ${light.el}° high`}`;
     $("#tiltV").textContent = $("#tilt").value + "°"; $("#cameraV").textContent = $("#camera").value + "°";
     const mm = $("#pages").value / 2 * $("#paper").value + 0.6;
     $("#thick").textContent = `About ${mm.toFixed(1)} mm thick.`;
@@ -221,6 +244,20 @@
     const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
     Object.assign(document.createElement("a"), { href: url, download: "book-spin.html" }).click();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+  });
+
+  // the light pad: top view, you at the bottom; centre = overhead, edge = horizon
+  const pad = $("#pad");
+  function fromPointer(e) {
+    const b = pad.getBoundingClientRect(), x = e.clientX - b.left - b.width / 2, y = e.clientY - b.top - b.height / 2;
+    const r = Math.min(1, Math.hypot(x, y) / (b.width / 2));
+    light.az = Math.round(Math.atan2(x, y) * 180 / Math.PI); light.el = Math.max(5, Math.round(90 - r * 90)); update();
+  }
+  pad.addEventListener("pointerdown", (e) => { pad.setPointerCapture(e.pointerId); fromPointer(e); });
+  pad.addEventListener("pointermove", (e) => { if (pad.hasPointerCapture(e.pointerId)) fromPointer(e); });
+  pad.addEventListener("keydown", (e) => {
+    const k = { ArrowLeft: [-5, 0], ArrowRight: [5, 0], ArrowUp: [0, 5], ArrowDown: [0, -5] }[e.key]; if (!k) return;
+    e.preventDefault(); light.az = ((light.az + k[0] + 540) % 360) - 180; light.el = Math.min(90, Math.max(5, light.el + k[1])); update();
   });
 
   update();

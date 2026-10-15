@@ -26,6 +26,7 @@ No three.js, no WebGL: a CSS 3D box in a 4 KB (gzipped) web component with no de
 | `camera` | how far the camera looks down, degrees | `10` |
 | `speed` | seconds per turn | `6.6` |
 | `shadow` | 0–1 | `1` |
+| `light` | `direction,height` in degrees. Direction: 0 = from the viewer, -90 = left, 90 = right, 180 = behind. Height: 0 = horizon, 90 = overhead. The shadow falls the other way. | `-40,50` |
 
 The book fills the element's height, so give the element a size. Images from another domain need CORS for the cover colour sampling; without it a neutral colour is used for the cover edges.
 

@@ -12,6 +12,8 @@
  * camera    degrees the camera looks down                       default 10
  * speed     seconds per turn                                    default 6.6
  * shadow    0–1                                                 default 1
+ * light     "direction,height" in degrees: direction 0 = from the viewer, -90 = left, 90 = right, 180 = behind;
+ *           height 0 = horizon, 90 = straight above. The shadow falls the other way.   default "-40,50"
  * The background is transparent. The book fills the element's height; give the element a size.
  */
 (() => {
@@ -20,8 +22,6 @@
     gold: ["#f1d68a", "#b8913c"], silver: ["#eef0f2", "#a9adb3"],
   };
   const N = 72;                                            // keyframe steps per turn for the light
-  const LIGHT = norm([-0.45, -0.75, 0.55]);                // toward the light: left, above, in front (y is down)
-  const HALF = norm(LIGHT.map((v, i) => v + [0, 0, 1][i]));
   function norm(v) { const l = Math.hypot(...v); return v.map((x) => x / l); }
   const num = (el, k, d) => { const v = parseFloat(el.getAttribute(k)); return Number.isFinite(v) ? v : d; };
   const css = String.raw;
@@ -43,7 +43,7 @@
   });
 
   class BookSpin extends HTMLElement {
-    static get observedAttributes() { return ["front", "spine", "back", "pages", "paper", "trim", "edge", "gloss", "tilt", "camera", "speed", "shadow"]; }
+    static get observedAttributes() { return ["front", "spine", "back", "pages", "paper", "trim", "edge", "gloss", "tilt", "camera", "speed", "shadow", "light"]; }
     constructor() { super(); this.attachShadow({ mode: "open" }); }
     connectedCallback() {
       this.ro = new ResizeObserver(() => this.render()); this.ro.observe(this);
@@ -79,6 +79,14 @@
       const [e1, e2] = EDGES[edgeAttr] || [edgeAttr, `color-mix(in srgb, ${edgeAttr} 70%, black)`];
       const metal = edgeAttr === "gold" || edgeAttr === "silver";
       const fc = front ? sample(front, 0.9, 1) : "#222", bc = back ? sample(back, 0, 0.1) : fc, sc = front ? sample(front, 0, 0.1) : fc;
+      // light: toward the light, y is down
+      const [laz, lel] = ((this.getAttribute("light") || "-40,50").split(",").map(Number).concat([NaN, NaN]))
+        .slice(0, 2).map((v, i) => (Number.isFinite(v) ? v : [-40, 50][i]) * Math.PI / 180);
+      const el = Math.min(Math.max(lel, 0.05), Math.PI / 2);
+      const LIGHT = [Math.sin(laz) * Math.cos(el), -Math.sin(el), Math.cos(laz) * Math.cos(el)];
+      const HALF = norm(LIGHT.map((v, i) => v + [0, 0, 1][i]));
+      const reach = Math.min(1.4, Math.cos(el) / Math.sin(el)) * tall * u * 0.32;      // shadow shift, away from the light
+      const ox = -Math.sin(laz) * reach, oz = -Math.cos(laz) * reach;
       const gloss = num(this, "gloss", 0.25), speed = num(this, "speed", 6.6), cam = num(this, "camera", 10), shadow = num(this, "shadow", 1);
 
       // ---- light per face, baked into keyframes (book normal → tilt → turn; Lambert + one highlight) ----
@@ -93,7 +101,7 @@
           const d = n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2];
           const h = Math.max(0, n[0] * HALF[0] + n[1] * HALF[1] + n[2] * HALF[2]);
           const p = (i / N * 100).toFixed(2);
-          shade += `${p}%{opacity:${Math.min(0.7, Math.max(0, 0.42 - 0.42 * Math.max(0, d))).toFixed(3)}}`;
+          shade += `${p}%{opacity:${Math.min(0.7, Math.max(0, 0.5 - 0.5 * Math.max(0, d))).toFixed(3)}}`;
           hi += `${p}%{opacity:${((name === "front" || name === "back" ? gloss : name === "spine" ? gloss * 0.6 : metal ? 0.5 : 0.05) * h ** 24).toFixed(3)}}`;
         }
         keys += `@keyframes s-${name}{${shade}}@keyframes h-${name}{${hi}}`;
@@ -115,20 +123,20 @@
         .stage{position:absolute;inset:0;perspective:${Math.max(box.width, box.height) * 2.6}px;perspective-origin:50% 40%}
         .world,.turn,.lean,.book{position:absolute;transform-style:preserve-3d}
         .world{left:50%;top:${50 + (tall * u) / box.height / 2 * 100}%;transform:rotateX(${-cam}deg)}
-        .turn,.ground{animation:turn var(--spin) linear infinite}
+        .turn,.gturn{animation:turn var(--spin) linear infinite}
         .lean{transform:rotateZ(${tilt * 180 / Math.PI}deg)}
         .book{transform:translate(${-px * u}px,${-py * u}px)}
         .f{position:absolute;left:0;top:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
         .f::before,.f::after{content:"";position:absolute;inset:0;animation:x var(--spin) linear infinite}
         .f::before{background:#000}.f::after{background:#fff;mix-blend-mode:screen}
-        .ground{position:absolute;transform-style:preserve-3d}
+        .ground{position:absolute;transform-style:preserve-3d;transform:translate3d(${ox}px,0,${oz}px)}.gturn{position:absolute;transform-style:preserve-3d}.contact{transform:none}
         .ground i{position:absolute;display:block;transform:rotateX(90deg)}
         .foot{left:${fx - 6 * u}px;width:${fw + 12 * u}px;top:${-T / 2 - 8 * u}px;height:${T + 16 * u}px;border-radius:50%;
           background:rgb(0 0 0 / ${0.16 * shadow});filter:blur(${Math.max(6, 9 * u)}px)}
         .touch{left:${-10 * u}px;width:${20 * u}px;top:${-T / 2 - 2}px;height:${T + 4}px;border-radius:50%;
           background:rgb(0 0 0 / ${0.35 * shadow});filter:blur(${Math.max(2, 2.5 * u)}px)}
         @keyframes turn{to{transform:rotateY(360deg)}}
-        @media (prefers-reduced-motion:reduce){.turn,.ground,.f::before,.f::after{animation-play-state:paused;animation-delay:calc(var(--spin) * -0.1)}}
+        @media (prefers-reduced-motion:reduce){.turn,.gturn,.f::before,.f::after{animation-play-state:paused;animation-delay:calc(var(--spin) * -0.1)}}
         ${keys}
         ${face("front", W, H, `translateZ(${T / 2}px)`, img(front, fc))}
         ${face("back", W, H, `rotateY(180deg) translateZ(${T / 2}px)`, img(back, bc))}
@@ -138,7 +146,7 @@
         ${face("bottom", W, T, `rotateX(-90deg) translateZ(${H / 2}px)`, pages("to bottom"))}
       </style>
       <div class="stage" part="stage"><div class="world">
-        ${shadow > 0 ? `<div class="ground"><i class="foot"></i><i class="touch"></i></div>` : ""}
+        ${shadow > 0 ? `<div class="ground"><div class="gturn"><i class="foot"></i></div></div><div class="ground contact"><i class="touch"></i></div>` : ""}
         <div class="turn"><div class="lean"><div class="book">
           <div class="f front"></div><div class="f back"></div><div class="f spine"></div>
           <div class="f fore"></div><div class="f top"></div><div class="f bottom"></div>
