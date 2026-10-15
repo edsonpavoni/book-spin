@@ -66,7 +66,7 @@
         <label class="drop" data-k="spine"><span>Spine</span><input type="file" accept="image/*"></label>
         <label class="drop" data-k="back"><span>Back</span><input type="file" accept="image/*"></label>
       </div>
-      <p class="note">Drop or click. Spine and back are optional.</p>
+      <p class="note">Drop or click. Spine and back are optional. Until you upload, the demo is <em>Art in the Age of Pixel Hallucinations</em>.</p>
     </fieldset>
 
     <div class="row">
@@ -129,18 +129,10 @@
   const imgs = { front: null, spine: null, back: null };   // data URLs
   let edge = "white";
 
-  // a placeholder cover until one is uploaded
-  function placeholder(w, h, bg, fg, lines) {
-    const c = document.createElement("canvas"); c.width = w; c.height = h; const g = c.getContext("2d");
-    g.fillStyle = bg; g.fillRect(0, 0, w, h); g.fillStyle = fg; g.textBaseline = "top";
-    lines.forEach(([t, size, y, x = 0.1]) => { g.font = `600 ${size}px Georgia, serif`; g.fillText(t, w * x, h * y); });
-    return c.toDataURL("image/png");
-  }
-  const demo = {
-    front: placeholder(600, 900, "#151515", "#f2f0ea", [["Your", 86, 0.1], ["Book", 86, 0.2], ["Title", 86, 0.3], ["Author Name", 26, 0.88]]),
-    back: placeholder(600, 900, "#151515", "#8d8a83", [["Upload a front, spine and back.", 22, 0.12]]),
-    spine: placeholder(60, 900, "#151515", "#f2f0ea", []),
-  };
+  // the demo book until one is uploaded: Art in the Age of Pixel Hallucinations, by Edson Pavoni (2025)
+  const demo = { front: "demo/aph-front.webp", spine: "demo/aph-spine.webp", back: "demo/aph-back.webp" };
+  const toData = async (url) => { const b = await (await fetch(url)).blob();
+    return new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(b); }); };
 
   // downscale uploads so the HTML stays light (covers: 1600 px tall at most, WebP)
   function shrink(file) {
@@ -216,6 +208,7 @@
     const js = await (await fetch("book-spin.js")).text();
     const a = attrs();
     const src = { front: imgs.front || demo.front, spine: imgs.spine || (imgs.front ? "" : demo.spine), back: imgs.back || (imgs.front ? "" : demo.back) };
+    for (const k in src) if (src[k] && !src[k].startsWith("data:")) src[k] = await toData(src[k]);   // the file must stand alone
     const list = Object.entries({ ...src, ...a }).filter(([, v]) => v).map(([k, v]) => ` ${k}="${v}"`).join("");
     const html = `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Book</title>
 <style>html,body{margin:0;height:100%;background:transparent}book-spin{display:block;width:100%;height:100%}</style></head>
