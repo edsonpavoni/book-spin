@@ -13,6 +13,9 @@
  * speed     seconds per turn                                    default 6.6
  * vary      0–1, speed variation: slower while a cover faces you, faster through the edges   default 0
  * shadow    0–1                                                 default 1
+ * look      studio (soft light from above) | spotlight (low hard light from the left, a reflection sweeping
+ *           across the covers, a cool rim on the edges: after the 2025 launch renders)   default studio
+ * backdrop  none (transparent) | dark (a dark room: wall, floor, a pool of light)          default none
  * The background is transparent. The book fills the element's height; give the element a size.
  */
 (() => {
@@ -42,7 +45,7 @@
   });
 
   class BookSpin extends HTMLElement {
-    static get observedAttributes() { return ["front", "spine", "back", "pages", "paper", "trim", "edge", "gloss", "tilt", "camera", "speed", "vary", "shadow"]; }
+    static get observedAttributes() { return ["front", "spine", "back", "pages", "paper", "trim", "edge", "gloss", "tilt", "camera", "speed", "vary", "shadow", "look", "backdrop"]; }
     constructor() { super(); this.attachShadow({ mode: "open" }); }
     connectedCallback() {
       this.ro = new ResizeObserver(() => this.render()); this.ro.observe(this);
@@ -80,8 +83,9 @@
       const [e1, e2] = EDGES[edgeAttr] || [edgeAttr, `color-mix(in srgb, ${edgeAttr} 70%, black)`];
       const metal = edgeAttr === "gold" || edgeAttr === "silver";
       const fc = front ? sample(front, 0.9, 1) : "#222", bc = back ? sample(back, 0, 0.1) : fc, sc = front ? sample(front, 0, 0.1) : fc;
-      // soft studio light: above, a little left and in front (toward the light, y is down); fixed
-      const LIGHT = norm([-0.35, -0.85, 0.4]);
+      // the light (toward the light, y is down): studio = soft, above, a little left and in front; spotlight = low, hard, from the left
+      const spot = (this.getAttribute("look") || "").trim() === "spotlight", dark = (this.getAttribute("backdrop") || "").trim() === "dark";
+      const LIGHT = spot ? norm([-0.85, -0.3, 0.45]) : norm([-0.35, -0.85, 0.4]);
       const HALF = norm(LIGHT.map((v, i) => v + [0, 0, 1][i]));
       const gloss = num(this, "gloss", 0.25), speed = num(this, "speed", 6.6), cam = num(this, "camera", 10), shadow = num(this, "shadow", 1);
       const vary = Math.min(0.9, Math.max(0, num(this, "vary", 0)) * 0.9);
@@ -91,7 +95,8 @@
       const faces = { front: [0, 0, 1], back: [0, 0, -1], spine: [-1, 0, 0], fore: [1, 0, 0], top: [0, -1, 0], bottom: [0, 1, 0] };
       let keys = "";
       for (const [name, [nx, ny, nz]] of Object.entries(faces)) {
-        let shade = "", hi = "";
+        let shade = "", hi = "", pos = "";
+        const cov = name === "front" || name === "back", hy = Math.atan2(HALF[0], HALF[2]);
         const rx = nx * c - ny * s, ry = nx * s + ny * c, rz = nz;
         for (let i = 0; i <= N; i++) {
           const a = angle(i / N), ca = Math.cos(a), sa = Math.sin(a);
@@ -99,10 +104,19 @@
           const d = n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2];
           const h = Math.max(0, n[0] * HALF[0] + n[1] * HALF[1] + n[2] * HALF[2]);
           const p = (i / N * 100).toFixed(2);
-          shade += `${p}%{opacity:${Math.min(0.7, Math.max(0, 0.5 - 0.5 * Math.max(0, d))).toFixed(3)}}`;
-          hi += `${p}%{opacity:${((name === "front" || name === "back" ? gloss : name === "spine" ? gloss * 0.6 : metal ? 0.5 : 0.05) * h ** 24).toFixed(3)}}`;
+          if (!spot) {
+            shade += `${p}%{opacity:${Math.min(0.7, Math.max(0, 0.5 - 0.5 * Math.max(0, d))).toFixed(3)}}`;
+            hi += `${p}%{opacity:${((cov ? gloss : name === "spine" ? gloss * 0.6 : metal ? 0.5 : 0.05) * h ** 24).toFixed(3)}}`;
+          } else {
+            // hard key light; covers: a broad reflection that slides across as the book turns; edges: a cool rim at grazing angles
+            shade += `${p}%{opacity:${Math.min(0.7, Math.max(0, 0.5 - 0.65 * Math.max(0, d))).toFixed(3)}}`;
+            const facing = Math.max(0, n[2]), rim = (1 - facing) ** 2 * (facing > 0 ? 1 : 0);
+            hi += `${p}%{opacity:${(cov ? (0.3 + gloss) * h ** 3 : name === "spine" ? 0.5 * rim + gloss * h ** 6 : (metal ? 0.6 : 0.45) * rim).toFixed(3)}}`;
+            if (cov) { let dd = Math.atan2(n[0], n[2]) - hy; dd = Math.atan2(Math.sin(dd), Math.cos(dd));
+              pos += `${p}%{background-position:${(50 + 62 * Math.sin(dd)).toFixed(1)}% 0}`; }
+          }
         }
-        keys += `@keyframes s-${name}{${shade}}@keyframes h-${name}{${hi}}`;
+        keys += `@keyframes s-${name}{${shade}}@keyframes h-${name}{${hi}}` + (pos ? `@keyframes p-${name}{${pos}}` : "");
       }
 
       const pages = (dir) => css`background:
@@ -111,7 +125,7 @@
         linear-gradient(${dir}, ${e2}, ${e1} 30%, ${e1} 70%, ${e2});`;
       const img = (im, col) => im ? `background:${col} url("${im.src}") center/100% 100% no-repeat;` : `background:${col};`;
       const face = (name, w, h, tf, bg) => css`.${name}{width:${w}px;height:${h}px;margin:${-h / 2}px 0 0 ${-w / 2}px;transform:${tf};${bg}}
-        .${name}::before{animation-name:s-${name}}.${name}::after{animation-name:h-${name}}`;
+        .${name}::before{animation-name:s-${name}}.${name}::after{animation-name:h-${name}${spot && (name === "front" || name === "back") ? `,p-${name}` : ""}}`;
       // ---- shadow, as under a softbox: the book's footprint straight below it (a thin strip that turns with the book),
       // very soft and faint, and a small dark touch where the corner meets the floor ----
       const big = tall * u, x0 = Math.min(...xx) * u, x1 = Math.max(...xx) * u, D = T + big * 0.05, touch = Math.max(6, T * 1.6);
@@ -127,6 +141,13 @@
         .f{position:absolute;left:0;top:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
         .f::before,.f::after{content:"";position:absolute;inset:0;animation:x var(--spin) linear infinite}
         .f::before{background:#000}.f::after{background:#fff;mix-blend-mode:screen}
+        ${spot ? `.front::after,.back::after{background:linear-gradient(112deg,transparent 36%,rgb(255 255 255 / .55) 46%,#fff 50%,rgb(255 255 255 / .55) 54%,transparent 64%) 50% 0/300% 100% no-repeat}
+          .spine::after,.fore::after,.top::after,.bottom::after{background:#6d72ff}` : ""}
+        .room{position:absolute;inset:0;background:
+          radial-gradient(ellipse 13% 42% at 0% ${floor - big * 0.18}px,rgb(255 255 255 / .34),rgb(255 255 255 / .12) 55%,transparent 72%),
+          radial-gradient(ellipse 70% 3.2% at 30% ${floor + big * 0.05}px,rgb(255 255 255 / .42),rgb(255 255 255 / .1) 50%,transparent 75%),
+          linear-gradient(90deg,rgb(0 0 0 / .25),transparent 30%,transparent 70%,rgb(0 0 0 / .35)),
+          linear-gradient(#171717,#242424 ${floor}px,#202020 ${floor}px,#151515)}
         .fw,.fn{position:absolute;display:block;border-radius:50%;transform:rotateX(90deg)}
         .fw{left:${x0 - big * 0.04}px;width:${x1 - x0 + big * 0.08}px;top:${-D / 2}px;height:${D}px;
           background:radial-gradient(farthest-side at ${(big * 0.04 - x0).toFixed(1)}px 50%,#000,rgb(0 0 0 / .3) 25%,rgb(0 0 0 / .06) 60%,transparent);
@@ -145,7 +166,7 @@
         ${face("top", W, T, `rotateX(90deg) translateZ(${H / 2}px)`, pages("to top"))}
         ${face("bottom", W, T, `rotateX(-90deg) translateZ(${H / 2}px)`, pages("to bottom"))}
       </style>
-      <div class="stage" part="stage"><div class="world">
+      <div class="stage" part="stage">${dark ? `<div class="room"></div>` : ""}<div class="world">
         ${shadow > 0 ? `<i class="touch"></i>` : ""}
         <div class="turn">${shadow > 0 ? `<i class="fw"></i><i class="fn"></i>` : ""}<div class="lean"><div class="book">
           <div class="f front"></div><div class="f back"></div><div class="f spine"></div>

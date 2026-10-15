@@ -27,6 +27,8 @@ No three.js, no WebGL: a CSS 3D box in a 5 KB (gzipped) web component with no de
 | `speed` | seconds per turn | `6.6` |
 | `vary` | speed variation, 0–1: slower while a cover faces you, faster through the edges (0 = steady) | `0` |
 | `shadow` | strength of the soft floor shadow, 0–1 | `1` |
+| `look` | `studio` (soft light from above) or `spotlight` (a low hard light from the left, a reflection sweeping across the covers, a cool rim on the edges) | `studio` |
+| `backdrop` | `none` (transparent) or `dark` (a dark room with a pool of light on the wall and a streak on the floor) | `none` |
 
 The book fills the element's height, so give the element a size. Images from another domain need CORS for the cover colour sampling; without it a neutral colour is used for the cover edges.
 

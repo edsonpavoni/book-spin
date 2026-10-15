@@ -88,6 +88,22 @@
       </div>
     </fieldset>
 
+    <fieldset>
+      <legend>Look</legend>
+      <div class="edges" id="looks">
+        <button data-l="studio" aria-pressed="true">Studio</button>
+        <button data-l="spotlight">Spotlight</button>
+      </div>
+      <p class="note">Spotlight: a low hard light from the left, a reflection sweeping across the covers and a cool rim on the edges, after the 2025 launch renders.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Backdrop</legend>
+      <div class="edges" id="backdrops">
+        <button data-b="none" aria-pressed="true">Transparent</button>
+        <button data-b="dark">Dark room</button>
+      </div>
+    </fieldset>
+
     <div class="row">
       <label><span>Trim (mm, optional)</span><input type="text" id="trim" placeholder="152x229"></label>
       <label><span>Seconds / turn</span><input type="number" id="speed" value="6.6" min="1" max="60" step="0.1"></label>
@@ -128,7 +144,7 @@
   const $ = (s) => document.querySelector(s);
   const book = $("#book");
   const imgs = { front: null, spine: null, back: null };   // data URLs
-  let edge = "white";
+  let edge = "white", look = "studio", backdrop = "none";
 
   // the demo book until one is uploaded: Art in the Age of Pixel Hallucinations, by Edson Pavoni (2025)
   const demo = { front: "demo/aph-front.webp", spine: "demo/aph-spine.webp", back: "demo/aph-back.webp" };
@@ -180,6 +196,8 @@
   function attrs() {
     const a = { pages: $("#pages").value, edge: edge === "custom" ? $("#custom").value : edge, tilt: $("#tilt").value,
       camera: $("#camera").value, speed: $("#speed").value, vary: $("#vary").value, gloss: $("#gloss").value, shadow: $("#shadow").value };
+    if (look !== "studio") a.look = look;
+    if (backdrop !== "none") a.backdrop = backdrop;
     if ($("#paper").value !== "0.1") a.paper = $("#paper").value;
     if ($("#trim").value.trim()) a.trim = $("#trim").value.trim();
     return a;
@@ -195,7 +213,7 @@
       const a = attrs();
       for (const k of ["front", "spine", "back"]) book.setAttribute(k, imgs[k] || (imgs.front && k !== "front" ? "" : demo[k]));
       for (const [k, v] of Object.entries(a)) book.setAttribute(k, v);
-      ["paper", "trim"].forEach((k) => { if (!(k in a)) book.removeAttribute(k); });
+      ["paper", "trim", "look", "backdrop"].forEach((k) => { if (!(k in a)) book.removeAttribute(k); });
       const list = Object.entries(a).map(([k, v]) => ` ${k}="${v}"`).join("");
       $("#code").textContent = `<book-spin front="front.jpg" spine="spine.jpg" back="back.jpg"${list}\n  style="display:block;width:480px;height:600px"></book-spin>\n<script src="https://cdn.jsdelivr.net/gh/edsonpavoni/book-spin@1.0.0/book-spin.js"><\/script>`;
     }, 60);
@@ -220,10 +238,21 @@
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   });
 
+  // look and backdrop pills
+  const pick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    const key = b.dataset.l ? "l" : "b";
+    document.querySelectorAll(`button[data-${key}]`).forEach((x) => x.setAttribute("aria-pressed", x === b));
+    if (b.dataset.l) look = b.dataset.l; else backdrop = b.dataset.b;
+    update();
+  };
+  $("#looks").addEventListener("click", pick); $("#backdrops").addEventListener("click", pick);
   // reset: every setting back to its default (the covers stay)
   $("#reset").addEventListener("click", () => {
     document.querySelectorAll("aside input:not([type=file])").forEach((i) => (i.value = i.defaultValue));
     $("#customDot").style.background = $("#custom").value;
+    look = "studio"; backdrop = "none";
+    document.querySelectorAll("button[data-l], button[data-b]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.l === "studio" || x.dataset.b === "none"));
     edge = "white"; document.querySelectorAll("#edges button").forEach((x) => x.setAttribute("aria-pressed", x.dataset.e === "white"));
     update();
   });
