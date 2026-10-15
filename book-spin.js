@@ -11,7 +11,7 @@
  * tilt      degrees the book leans onto its corner              default 35
  * camera    degrees the camera looks down                       default 10
  * speed     seconds per turn                                    default 6.6
- * vary      0–1, speed variation: slower while a cover faces you, faster through the edges   default 0
+ * vary      0–1, speed variation: eases into the front cover (stops on it at 0.5, holds longer up to 1)   default 0
  * shadow    0–1                                                 default 1
  * look      studio (soft light from above) | spotlight (low hard light from the left, a reflection sweeping
  *           across the covers, a cool rim on the edges: after the 2025 launch renders)   default studio
@@ -88,8 +88,12 @@
       const LIGHT = spot ? norm([-0.85, -0.3, 0.45]) : norm([-0.35, -0.85, 0.4]);
       const HALF = norm(LIGHT.map((v, i) => v + [0, 0, 1][i]));
       const gloss = num(this, "gloss", 0.25), speed = num(this, "speed", 6.6), cam = num(this, "camera", 10), shadow = num(this, "shadow", 1);
-      const vary = Math.min(0.9, Math.max(0, num(this, "vary", 0)) * 0.9);
-      const angle = (t) => { const q = t * 2 * Math.PI; return q - (vary / 2) * Math.sin(2 * q); };   // turn at time t (0–1)
+      // speed variation: eases into the front cover only (0–0.5: more and more ease, a smooth stop at 0.5),
+      // then holds on the cover (0.5–1: up to a quarter of the turn); the back goes by at speed
+      const vary = Math.min(1, Math.max(0, num(this, "vary", 0)));
+      const ease = Math.min(1, vary * 2), hold = Math.max(0, vary - 0.5) * 0.5;
+      const angle = (t) => { if (t < hold) return 0; const r = (t - hold) / (1 - hold);
+        return 2 * Math.PI * ((1 - ease) * r + ease * (r - Math.sin(2 * Math.PI * r) / (2 * Math.PI))); };   // turn at time t (0–1)
 
       // ---- light per face, baked into keyframes (book normal → tilt → turn; Lambert + one highlight) ----
       const faces = { front: [0, 0, 1], back: [0, 0, -1], spine: [-1, 0, 0], fore: [1, 0, 0], top: [0, -1, 0], bottom: [0, 1, 0] };

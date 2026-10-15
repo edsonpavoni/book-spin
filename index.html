@@ -204,7 +204,7 @@
   }
   let t;
   function update() {
-    $("#varyV").textContent = +$("#vary").value === 0 ? "steady" : Math.round($("#vary").value * 100) + "%";
+    { const v = +$("#vary").value; $("#varyV").textContent = v === 0 ? "steady" : v < 0.5 ? `ease ${Math.round(v * 200)}%` : v === 0.5 ? "stops on the cover" : `holds ${Math.round((v - 0.5) * 50)}% of the turn`; }
     $("#shadowV").textContent = Math.round($("#shadow").value * 100) + "%";
     $("#tiltV").textContent = $("#tilt").value + "°"; $("#cameraV").textContent = $("#camera").value + "°";
     const mm = $("#pages").value / 2 * $("#paper").value + 0.6;
