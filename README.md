@@ -1,6 +1,6 @@
 # Book Spin
 
-A book standing on one corner, turning on its axis, on a transparent background with a soft shadow. Upload the front, spine and back, set the page count and the page-edge finish, and embed it anywhere.
+A book standing on one corner, turning on its axis, on a transparent background with a soft studio shadow (light from above, like a softbox). Upload the front, spine and back, set the page count and the page-edge finish, and embed it anywhere.
 
 **Tool:** open `index.html` (or the GitHub Pages link) → upload the covers → **Download HTML** (one self-contained file, images inside) or **Copy embed**.
 
@@ -25,8 +25,7 @@ No three.js, no WebGL: a CSS 3D box in a 5 KB (gzipped) web component with no de
 | `tilt` | how far the book leans onto its corner, degrees | `35` |
 | `camera` | how far the camera looks down, degrees | `10` |
 | `speed` | seconds per turn | `6.6` |
-| `shadow` | 0–1 | `1` |
-| `light` | `direction,height` in degrees. Direction: 0 = from the viewer, -90 = left, 90 = right, 180 = behind. Height: 0 = horizon, 90 = overhead. The shadow falls the other way. | `-40,50` |
+| `shadow` | strength of the soft floor shadow, 0–1 | `1` |
 
 The book fills the element's height, so give the element a size. Images from another domain need CORS for the cover colour sampling; without it a neutral colour is used for the cover edges.
 
