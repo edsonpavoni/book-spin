@@ -71,7 +71,9 @@
       const [px, py] = corners.reduce((m, p) => (rot(p)[1] > rot(m)[1] ? p : m));
       const xs = corners.map((p) => rot([p[0] - px, p[1] - py])), ys = xs.map((p) => p[1]), xx = xs.map((p) => p[0]);
       const tall = Math.max(...ys) - Math.min(...ys), wide = Math.max(...xx) - Math.min(...xx);
-      const u = Math.min(box.height * 0.8 / tall, box.width * 0.8 / Math.max(wide, Hm, Wm));   // px per mm; fits every angle
+      const camA = num(this, "camera", 10) * Math.PI / 180, room = 1 + 0.9 * Math.sin(camA);   // room below the corner for the shadow
+      const u = Math.min(box.height * 0.84 / (tall * room), box.width * 0.8 / Math.max(wide, Hm, Wm));   // px per mm; fits every angle
+      const floor = (box.height - tall * u * room) / 2 + tall * u;             // y of the corner on the floor, px
       const W = Wm * u, H = Hm * u, T = Math.max(2, Tm * u), cover = Math.max(0.6, 0.3 * u);
 
       // ---- colours ----
@@ -85,8 +87,6 @@
       const el = Math.min(Math.max(lel, 0.05), Math.PI / 2);
       const LIGHT = [Math.sin(laz) * Math.cos(el), -Math.sin(el), Math.cos(laz) * Math.cos(el)];
       const HALF = norm(LIGHT.map((v, i) => v + [0, 0, 1][i]));
-      const reach = Math.min(1.4, Math.cos(el) / Math.sin(el)) * tall * u * 0.32;      // shadow shift, away from the light
-      const ox = -Math.sin(laz) * reach, oz = -Math.cos(laz) * reach;
       const gloss = num(this, "gloss", 0.25), speed = num(this, "speed", 6.6), cam = num(this, "camera", 10), shadow = num(this, "shadow", 1);
 
       // ---- light per face, baked into keyframes (book normal → tilt → turn; Lambert + one highlight) ----
@@ -114,30 +114,45 @@
       const img = (im, col) => im ? `background:${col} url("${im.src}") center/100% 100% no-repeat;` : `background:${col};`;
       const face = (name, w, h, tf, bg) => css`.${name}{width:${w}px;height:${h}px;margin:${-h / 2}px 0 0 ${-w / 2}px;transform:${tf};${bg}}
         .${name}::before{animation-name:s-${name}}.${name}::after{animation-name:h-${name}}`;
-      // footprint on the floor: the tilted book seen from above
-      const fx = Math.min(...xx) * u, fw = wide * u;
+      // ---- cast shadow: the book's corners projected onto the floor along the light, per step of the turn ----
+      // Two quads (front and back planes of the book) whose union is the shadow; they start at the corner on the floor.
+      const sel = Math.max(el, 10 * Math.PI / 180);                       // a very low sun would throw it off the page
+      const SL = [LIGHT[0] / Math.cos(el) * Math.cos(sel), -Math.sin(sel), LIGHT[2] / Math.cos(el) * Math.cos(sel)];
+      const quad = corners.map((p) => rot([p[0] - px, p[1] - py]).map((v) => v * u));   // book plane, pivot at 0, y up < 0
+      const cap = 0.9 * tall * u, paths = [[], []]; let far = 1;     // a long shadow is cut at cap (it has faded out by then)
+      for (let i = 0; i <= N; i++) {
+        const a = (i / N) * 2 * Math.PI, ca = Math.cos(a), sa = Math.sin(a);
+        [T / 2, -T / 2].forEach((z, k) => paths[k].push(quad.map(([x, y]) => {
+          const X = x * ca + z * sa, Z = -x * sa + z * ca, t = y / SL[1];      // walk away from the light down to y = 0
+          let gx = X - t * SL[0], gz = Z - t * SL[2]; const d = Math.hypot(gx, gz);
+          if (d > cap) { gx *= cap / d; gz *= cap / d; } far = Math.max(far, Math.min(d, cap)); return [gx, gz];
+        })));
+      }
+      const S = Math.ceil(far * 2 + 120), o = S / 2;
+      const shKeys = paths.map((frames, k) => `@keyframes q${k}{${frames.map((q, i) =>
+        `${(i / N * 100).toFixed(2)}%{clip-path:polygon(${q.map(([x, z]) => `${(x + o).toFixed(1)}px ${(z + o).toFixed(1)}px`).join(",")})}`).join("")}}`).join("");
+      const soft = Math.max(4, far * 0.06);
 
       this.shadowRoot.innerHTML = css`<style>
         :host{display:block;position:relative;contain:layout paint;--spin:${speed}s}
         :host([data-off]) *,:host([data-off]) *::before,:host([data-off]) *::after{animation-play-state:paused!important}
         .stage{position:absolute;inset:0;perspective:${Math.max(box.width, box.height) * 2.6}px;perspective-origin:50% 40%}
         .world,.turn,.lean,.book{position:absolute;transform-style:preserve-3d}
-        .world{left:50%;top:${50 + (tall * u) / box.height / 2 * 100}%;transform:rotateX(${-cam}deg)}
-        .turn,.gturn{animation:turn var(--spin) linear infinite}
+        .world{left:50%;top:${floor.toFixed(1)}px;transform:rotateX(${-cam}deg)}
+        .turn{animation:turn var(--spin) linear infinite}
         .lean{transform:rotateZ(${tilt * 180 / Math.PI}deg)}
         .book{transform:translate(${-px * u}px,${-py * u}px)}
         .f{position:absolute;left:0;top:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
         .f::before,.f::after{content:"";position:absolute;inset:0;animation:x var(--spin) linear infinite}
         .f::before{background:#000}.f::after{background:#fff;mix-blend-mode:screen}
-        .ground{position:absolute;transform-style:preserve-3d;transform:translate3d(${ox}px,0,${oz}px)}.gturn{position:absolute;transform-style:preserve-3d}.contact{transform:none}
-        .ground i{position:absolute;display:block;transform:rotateX(90deg)}
-        .foot{left:${fx - 6 * u}px;width:${fw + 12 * u}px;top:${-T / 2 - 8 * u}px;height:${T + 16 * u}px;border-radius:50%;
-          background:rgb(0 0 0 / ${0.16 * shadow});filter:blur(${Math.max(6, 9 * u)}px)}
-        .touch{left:${-10 * u}px;width:${20 * u}px;top:${-T / 2 - 2}px;height:${T + 4}px;border-radius:50%;
-          background:rgb(0 0 0 / ${0.35 * shadow});filter:blur(${Math.max(2, 2.5 * u)}px)}
+        .sh{position:absolute;left:${-o}px;top:${-o}px;width:${S}px;height:${S}px;transform:rotateX(90deg)}
+        .sh i{position:absolute;inset:0;background:#000;animation:x var(--spin) linear infinite}
+        .sh i:first-child{animation-name:q0}.sh i:last-child{animation-name:q1}
+        .near{filter:blur(1.5px);opacity:${0.4 * shadow};-webkit-mask:radial-gradient(circle at 50% 50%,#000,transparent ${(far * 0.55).toFixed(0)}px);mask:radial-gradient(circle at 50% 50%,#000,transparent ${(far * 0.55).toFixed(0)}px)}
+        .wide{filter:blur(${soft.toFixed(1)}px);opacity:${0.22 * shadow};-webkit-mask:radial-gradient(circle at 50% 50%,#000 10%,transparent ${(far * 1.05).toFixed(0)}px);mask:radial-gradient(circle at 50% 50%,#000 10%,transparent ${(far * 1.05).toFixed(0)}px)}
         @keyframes turn{to{transform:rotateY(360deg)}}
-        @media (prefers-reduced-motion:reduce){.turn,.gturn,.f::before,.f::after{animation-play-state:paused;animation-delay:calc(var(--spin) * -0.1)}}
-        ${keys}
+        @media (prefers-reduced-motion:reduce){.turn,.sh i,.f::before,.f::after{animation-play-state:paused;animation-delay:calc(var(--spin) * -0.1)}}
+        ${keys}${shKeys}
         ${face("front", W, H, `translateZ(${T / 2}px)`, img(front, fc))}
         ${face("back", W, H, `rotateY(180deg) translateZ(${T / 2}px)`, img(back, bc))}
         ${face("spine", T, H, `rotateY(-90deg) translateZ(${W / 2}px)`, img(spine, sc))}
@@ -146,7 +161,7 @@
         ${face("bottom", W, T, `rotateX(-90deg) translateZ(${H / 2}px)`, pages("to bottom"))}
       </style>
       <div class="stage" part="stage"><div class="world">
-        ${shadow > 0 ? `<div class="ground"><div class="gturn"><i class="foot"></i></div></div><div class="ground contact"><i class="touch"></i></div>` : ""}
+        ${shadow > 0 ? `<div class="sh wide"><i></i><i></i></div><div class="sh near"><i></i><i></i></div>` : ""}
         <div class="turn"><div class="lean"><div class="book">
           <div class="f front"></div><div class="f back"></div><div class="f spine"></div>
           <div class="f fore"></div><div class="f top"></div><div class="f bottom"></div>
