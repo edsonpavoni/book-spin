@@ -2,7 +2,9 @@
  *
  * <book-spin front="front.jpg" spine="spine.jpg" back="back.jpg" pages="240" edge="cream"></book-spin>
  *
- * front / spine / back  image URLs (spine and back optional: a colour from the cover is used instead)
+ * front / spine / back  image URLs (spine and back optional: a colour from the cover is used instead).
+ *           Several books: separate the URLs with |, e.g. front="a.jpg|b.jpg|c.jpg". The book changes to the next one
+ *           on the frame where only its page edges face you, once a turn.
  * pages     page count (sides), sets the thickness             default 200
  * paper     thickness of one leaf, mm                           default 0.1  (80 g/m² offset)
  * trim      width x height in mm, e.g. "152x229"                default: front image ratio, 229 mm high
@@ -56,7 +58,10 @@
 
     async render() {
       const ticket = (this.ticket = (this.ticket || 0) + 1);
-      const [front, spine, back] = await Promise.all(["front", "spine", "back"].map((k) => load(this.getAttribute(k))));
+      // one or more books: lists separated by |; the first book's images are measured (size, edge colours)
+      const lists = ["front", "spine", "back"].map((k) => (this.getAttribute(k) || "").split("|").map((x) => x.trim()));
+      const K = Math.max(...lists.map((l) => l.length));
+      const [front, spine, back] = await Promise.all(lists.map((l) => load(l[0])));
       if (ticket !== this.ticket) return;
       const box = this.getBoundingClientRect(); if (!box.height) return;
 
@@ -127,7 +132,18 @@
         linear-gradient(${dir}, ${fc} 0 ${cover}px, transparent ${cover}px calc(100% - ${cover}px), ${bc} calc(100% - ${cover}px)),
         repeating-linear-gradient(${dir}, rgb(0 0 0 / .07) 0 1px, transparent 1px 2.5px),
         linear-gradient(${dir}, ${e2}, ${e1} 30%, ${e1} 70%, ${e2});`;
-      const img = (im, col) => im ? `background:${col} url("${im.src}") center/100% 100% no-repeat;` : `background:${col};`;
+      const img = (im, col) => im && K === 1 ? `background:${col} url("${im.src}") center/100% 100% no-repeat;` : `background:${col};`;
+      // several books: each face holds one layer per book, shown in turn; the change happens when only the page edges
+      // face the viewer (the fore-edge normal points at the camera: the turn angle is 270°)
+      let swapAt = 0.75;
+      if (K > 1) { let lo = 0, hi = 1; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (angle(m) < 1.5 * Math.PI) lo = m; else hi = m; } swapAt = (lo + hi) / 2; }
+      const pct = (x) => (((x % 1) + 1) % 1 * 100).toFixed(3);
+      const layerKeys = K === 1 ? "" : Array.from({ length: K }, (_, k) => {
+        const on = (k - 1 + swapAt) / K, off = (k + swapAt) / K, v0 = k === 0 ? 1 : 0;
+        return `@keyframes b${k}{0%{opacity:${v0}}${pct(on)}%{opacity:1}${pct(off)}%{opacity:0}100%{opacity:${v0}}}`;
+      }).join("");
+      const layers = (i) => K === 1 ? "" : lists[i].concat(Array(K).fill(lists[i][0])).slice(0, K)
+        .map((u, k) => u ? `<i class="L" style="background-image:url('${u.replace(/'/g, "%27")}');animation-name:b${k}"></i>` : `<i class="L"></i>`).join("");
       const face = (name, w, h, tf, bg) => css`.${name}{width:${w}px;height:${h}px;margin:${-h / 2}px 0 0 ${-w / 2}px;transform:${tf};${bg}}
         .${name}::before{animation-name:s-${name}}.${name}::after{animation-name:h-${name}${spot && (name === "front" || name === "back") ? `,p-${name}` : ""}}`;
       // ---- shadow, as under a softbox: the book's footprint straight below it (a thin strip that turns with the book),
@@ -143,7 +159,9 @@
         .lean{transform:rotateZ(${tilt * 180 / Math.PI}deg)}
         .book{transform:translate(${-px * u}px,${-py * u}px)}
         .f{position:absolute;left:0;top:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
-        .f::before,.f::after{content:"";position:absolute;inset:0;animation:x var(--spin) linear infinite}
+        .f::before,.f::after{content:"";position:absolute;inset:0;z-index:1;animation:x var(--spin) linear infinite}
+        .L{position:absolute;inset:0;opacity:0;background:center/100% 100% no-repeat;animation:x calc(var(--spin) * ${K}) steps(1,end) infinite}
+        ${layerKeys}
         .f::before{background:#000}.f::after{background:#fff;mix-blend-mode:screen}
         ${spot ? `.front::after,.back::after{background:linear-gradient(112deg,transparent 36%,rgb(255 255 255 / .55) 46%,#fff 50%,rgb(255 255 255 / .55) 54%,transparent 64%) 50% 0/300% 100% no-repeat}
           .spine::after,.fore::after,.top::after,.bottom::after{background:#6d72ff}` : ""}
@@ -161,7 +179,7 @@
         .touch{position:absolute;left:${-touch}px;top:${-touch / 2.4}px;width:${touch * 2}px;height:${touch / 1.2}px;border-radius:50%;transform:rotateX(90deg);
           background:radial-gradient(closest-side,rgb(0 0 0 / ${0.75 * shadow}),transparent);filter:blur(1px)}
         @keyframes turn{${Array.from({ length: N + 1 }, (_, i) => `${(i / N * 100).toFixed(2)}%{transform:rotateY(${(angle(i / N) * 180 / Math.PI).toFixed(2)}deg)}`).join("")}}
-        @media (prefers-reduced-motion:reduce){.turn,.f::before,.f::after{animation-play-state:paused;animation-delay:calc(var(--spin) * -0.1)}}
+        @media (prefers-reduced-motion:reduce){.turn,.L,.f::before,.f::after{animation-play-state:paused;animation-delay:calc(var(--spin) * -0.1)}}
         ${keys}
         ${face("front", W, H, `translateZ(${T / 2}px)`, img(front, fc))}
         ${face("back", W, H, `rotateY(180deg) translateZ(${T / 2}px)`, img(back, bc))}
@@ -173,7 +191,7 @@
       <div class="stage" part="stage">${dark ? `<div class="room"></div>` : ""}<div class="world">
         ${shadow > 0 ? `<i class="touch"></i>` : ""}
         <div class="turn">${shadow > 0 ? `<i class="fw"></i><i class="fn"></i>` : ""}<div class="lean"><div class="book">
-          <div class="f front"></div><div class="f back"></div><div class="f spine"></div>
+          <div class="f front">${layers(0)}</div><div class="f back">${layers(2)}</div><div class="f spine">${layers(1)}</div>
           <div class="f fore"></div><div class="f top"></div><div class="f bottom"></div>
         </div></div></div>
       </div></div>`;

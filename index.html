@@ -23,6 +23,11 @@
   .drop.over { border-color: var(--fg); }
   .drop.has span { display: none; }
   .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .bk { margin-bottom: 12px; }
+  .bk-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--mute); margin-bottom: 5px; }
+  .bk-head button, .add { border: 0; background: none; color: var(--mute); font: inherit; font-size: 12.5px; cursor: pointer; padding: 0; }
+  .bk-head button:hover, .add:hover { color: var(--fg); }
+  .add { border: 1px dashed var(--line); border-radius: 6px; width: 100%; padding: 7px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
   label { display: block; }
   input[type=number], input[type=text], select { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: inherit; }
@@ -57,20 +62,17 @@
 <main>
   <aside>
     <h1>Book Spin</h1>
-    <p class="sub">Upload a book's covers. Get a transparent 3D book turning on its corner, light enough for any page (one 5 KB script, no libraries).</p>
+    <p class="sub">Upload a book's covers, or several books. Get a transparent 3D book turning on its corner, light enough for any page (one 5 KB script, no libraries).</p>
 
     <fieldset>
-      <legend>Covers</legend>
-      <div class="drops">
-        <label class="drop" data-k="front"><span>Front</span><input type="file" accept="image/*"></label>
-        <label class="drop" data-k="spine"><span>Spine</span><input type="file" accept="image/*"></label>
-        <label class="drop" data-k="back"><span>Back</span><input type="file" accept="image/*"></label>
-      </div>
-      <p class="note">Drop or click. Spine and back are optional. Until you upload, the demo is <em>Art in the Age of Pixel Hallucinations</em>.</p>
+      <legend>Books</legend>
+      <div id="books"></div>
+      <button class="add" id="addBook" type="button">+ Add a book</button>
+      <p class="note">Drop or click to replace an image; spine and back are optional. With more than one book, the book changes to the next one on the frame where only its pages face you. The demo: <em>Art in the Age of Pixel Hallucinations</em> and two mock covers from <em>Sacred in Flux</em>.</p>
     </fieldset>
 
     <div class="row">
-      <label><span>Pages</span><input type="number" id="pages" value="200" min="8" max="2000" step="2"></label>
+      <label><span>Pages</span><input type="number" id="pages" value="280" min="8" max="2000" step="2"></label>
       <label><span>Paper (mm/leaf)</span><input type="number" id="paper" value="0.1" min="0.04" max="0.3" step="0.01"></label>
     </div>
     <p class="note" id="thick" style="margin:-8px 0 14px"></p>
@@ -78,10 +80,10 @@
     <fieldset>
       <legend>Page edges</legend>
       <div class="edges" id="edges">
-        <button data-e="white" aria-pressed="true"><i style="background:#f5f3ee"></i>White</button>
+        <button data-e="white"><i style="background:#f5f3ee"></i>White</button>
         <button data-e="cream"><i style="background:#efe5cc"></i>Cream</button>
         <button data-e="gold"><i style="background:linear-gradient(135deg,#f1d68a,#b8913c)"></i>Gilded</button>
-        <button data-e="silver"><i style="background:linear-gradient(135deg,#eef0f2,#a9adb3)"></i>Silver</button>
+        <button data-e="silver" aria-pressed="true"><i style="background:linear-gradient(135deg,#eef0f2,#a9adb3)"></i>Silver</button>
         <button data-e="black"><i style="background:#1a1a1a"></i>Black</button>
         <button data-e="custom"><i id="customDot" style="background:#c8402f"></i>Sprayed</button>
         <input type="color" id="custom" value="#c8402f" aria-label="Sprayed edge colour">
@@ -91,8 +93,8 @@
     <fieldset>
       <legend>Look</legend>
       <div class="edges" id="looks">
-        <button data-l="studio" aria-pressed="true">Studio</button>
-        <button data-l="spotlight">Spotlight</button>
+        <button data-l="studio">Studio</button>
+        <button data-l="spotlight" aria-pressed="true">Spotlight</button>
       </div>
       <p class="note">Spotlight: a low hard light from the left, a reflection sweeping across the covers and a cool rim on the edges, after the 2025 launch renders.</p>
     </fieldset>
@@ -106,15 +108,15 @@
 
     <div class="row">
       <label><span>Trim (mm, optional)</span><input type="text" id="trim" placeholder="152x229"></label>
-      <label><span>Seconds / turn</span><input type="number" id="speed" value="6.6" min="1" max="60" step="0.1"></label>
+      <label><span>Seconds / turn</span><input type="number" id="speed" value="8" min="1" max="60" step="0.1"></label>
     </div>
     <div class="row">
       <label><span>Lean <b id="tiltV">35°</b></span><input type="range" id="tilt" min="0" max="60" value="35"></label>
       <label><span>Camera <b id="cameraV">10°</b></span><input type="range" id="camera" min="0" max="30" value="10"></label>
     </div>
     <div class="row">
-      <label><span>Speed variation <b id="varyV">0</b></span><input type="range" id="vary" min="0" max="1" step="0.05" value="0"></label>
-      <label><span>Cover gloss</span><input type="range" id="gloss" min="0" max="1" step="0.05" value="0.25"></label>
+      <label><span>Speed variation <b id="varyV">0</b></span><input type="range" id="vary" min="0" max="1" step="0.05" value="0.3"></label>
+      <label><span>Cover gloss</span><input type="range" id="gloss" min="0" max="1" step="0.05" value="0.1"></label>
       <label><span>Shadow <b id="shadowV">100%</b></span><input type="range" id="shadow" min="0" max="1" step="0.05" value="1"></label>
     </div>
 
@@ -123,7 +125,7 @@
       <button class="ghost" id="reset" title="Settings back to the defaults; the covers stay">Reset</button>
       <button class="ghost" id="copy">Copy embed</button>
     </div>
-    <p class="note">The HTML file holds everything (images inside), transparent background: open it, or drop it in an iframe. The embed uses your own image URLs.</p>
+    <p class="note">The HTML file holds everything (all the images inside), transparent background: open it, or drop it in an iframe. The embed uses your own image URLs.</p>
     <pre id="code"></pre>
   </aside>
 
@@ -143,11 +145,14 @@
 <script>
   const $ = (s) => document.querySelector(s);
   const book = $("#book");
-  const imgs = { front: null, spine: null, back: null };   // data URLs
-  let edge = "white", look = "studio", backdrop = "none";
+  // the tool's defaults are Edson's settings (Oct 15, 2026); Reset returns to them
+  const DEF = { edge: "silver", look: "spotlight", backdrop: "none" };
+  let edge = DEF.edge, look = DEF.look, backdrop = DEF.backdrop;
 
-  // the demo book until one is uploaded: Art in the Age of Pixel Hallucinations, by Edson Pavoni (2025)
-  const demo = { front: "demo/aph-front.webp", spine: "demo/aph-spine.webp", back: "demo/aph-back.webp" };
+  // the demo books until replaced: Art in the Age of Pixel Hallucinations (Edson Pavoni, 2025) and two mock covers
+  // from Sacred in Flux (Edson Pavoni & Ju Freire, 2022)
+  const demo = ["aph", "sif2", "sif3"].map((n) => ({ front: `demo/${n}-front.webp`, spine: `demo/${n}-spine.webp`, back: `demo/${n}-back.webp` }));
+  let books = demo.map((b) => ({ ...b }));
   const toData = async (url) => { const b = await (await fetch(url)).blob();
     return new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(b); }); };
 
@@ -170,15 +175,20 @@
     });
   }
 
-  document.querySelectorAll(".drop").forEach((d) => {
-    const k = d.dataset.k, inp = d.querySelector("input");
-    const take = async (f) => { if (!f || !f.type.startsWith("image/")) return; imgs[k] = await shrink(f);
-      d.style.backgroundImage = `url("${imgs[k]}")`; d.classList.add("has"); update(); };
-    inp.addEventListener("change", () => take(inp.files[0]));
-    d.addEventListener("dragover", (e) => { e.preventDefault(); d.classList.add("over"); });
-    d.addEventListener("dragleave", () => d.classList.remove("over"));
-    d.addEventListener("drop", (e) => { e.preventDefault(); d.classList.remove("over"); take(e.dataTransfer.files[0]); });
-  });
+  // the book list: one row per book (front, spine, back)
+  function drawBooks() {
+    $("#books").innerHTML = books.map((b, i) => `<div class="bk"><div class="bk-head"><span>Book ${i + 1}</span>${books.length > 1 ? `<button type="button" data-rm="${i}" aria-label="Remove book ${i + 1}">Remove</button>` : ""}</div>
+      <div class="drops">${["front", "spine", "back"].map((k) => `<label class="drop${b[k] ? " has" : ""}" data-i="${i}" data-k="${k}"${b[k] ? ` style="background-image:url('${b[k]}')"` : ""}><span>${k[0].toUpperCase() + k.slice(1)}</span><input type="file" accept="image/*"></label>`).join("")}</div></div>`).join("");
+    $("#addBook").hidden = books.length >= 6;
+  }
+  const take = async (d, f) => { if (!f || !f.type.startsWith("image/")) return; books[d.dataset.i][d.dataset.k] = await shrink(f); drawBooks(); update(); };
+  $("#books").addEventListener("change", (e) => { const d = e.target.closest(".drop"); if (d) take(d, e.target.files[0]); });
+  $("#books").addEventListener("dragover", (e) => { const d = e.target.closest(".drop"); if (d) { e.preventDefault(); d.classList.add("over"); } });
+  $("#books").addEventListener("dragleave", (e) => e.target.closest(".drop")?.classList.remove("over"));
+  $("#books").addEventListener("drop", (e) => { const d = e.target.closest(".drop"); if (!d) return; e.preventDefault(); d.classList.remove("over"); take(d, e.dataTransfer.files[0]); });
+  $("#books").addEventListener("click", (e) => { const r = e.target.closest("[data-rm]"); if (r) { books.splice(+r.dataset.rm, 1); drawBooks(); update(); } });
+  $("#addBook").addEventListener("click", () => { books.push({ front: "", spine: "", back: "" }); drawBooks(); });
+  drawBooks();
 
   $("#edges").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
@@ -211,11 +221,13 @@
     $("#thick").textContent = `About ${mm.toFixed(1)} mm thick.`;
     clearTimeout(t); t = setTimeout(() => {
       const a = attrs();
-      for (const k of ["front", "spine", "back"]) book.setAttribute(k, imgs[k] || (imgs.front && k !== "front" ? "" : demo[k]));
+      const used = books.filter((b) => b.front);
+      for (const k of ["front", "spine", "back"]) book.setAttribute(k, used.map((b) => b[k]).join("|"));
       for (const [k, v] of Object.entries(a)) book.setAttribute(k, v);
       ["paper", "trim", "look", "backdrop"].forEach((k) => { if (!(k in a)) book.removeAttribute(k); });
       const list = Object.entries(a).map(([k, v]) => ` ${k}="${v}"`).join("");
-      $("#code").textContent = `<book-spin front="front.jpg" spine="spine.jpg" back="back.jpg"${list}\n  style="display:block;width:480px;height:600px"></book-spin>\n<script src="https://cdn.jsdelivr.net/gh/edsonpavoni/book-spin@1.0.0/book-spin.js"><\/script>`;
+      const n = Math.max(1, used.length), names = (k) => Array.from({ length: n }, (_, i) => n > 1 ? `book${i + 1}-${k}.jpg` : `${k}.jpg`).join("|");
+      $("#code").textContent = `<book-spin front="${names("front")}" spine="${names("spine")}" back="${names("back")}"${list}\n  style="display:block;width:480px;height:600px"></book-spin>\n<script src="https://cdn.jsdelivr.net/gh/edsonpavoni/book-spin@1.0.0/book-spin.js"><\/script>`;
     }, 60);
   }
 
@@ -227,9 +239,10 @@
   $("#dl").addEventListener("click", async () => {
     const js = await (await fetch("book-spin.js")).text();
     const a = attrs();
-    const src = { front: imgs.front || demo.front, spine: imgs.spine || (imgs.front ? "" : demo.spine), back: imgs.back || (imgs.front ? "" : demo.back) };
-    for (const k in src) if (src[k] && !src[k].startsWith("data:")) src[k] = await toData(src[k]);   // the file must stand alone
-    const list = Object.entries({ ...src, ...a }).filter(([, v]) => v).map(([k, v]) => ` ${k}="${v}"`).join("");
+    const used = books.filter((b) => b.front), src = {};
+    for (const k of ["front", "spine", "back"])   // the file must stand alone: every image goes inside it
+      src[k] = (await Promise.all(used.map((b) => b[k] && !b[k].startsWith("data:") ? toData(b[k]) : b[k]))).join("|");
+    const list = Object.entries({ ...src, ...a }).filter(([, v]) => v.replace(/\|/g, "")).map(([k, v]) => ` ${k}="${v}"`).join("");
     const html = `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Book</title>
 <style>html,body{margin:0;height:100%;background:transparent}book-spin{display:block;width:100%;height:100%}</style></head>
 <body><book-spin${list}></book-spin>\n<script>\n${js}\n<\/script></body></html>\n`;
@@ -251,9 +264,9 @@
   $("#reset").addEventListener("click", () => {
     document.querySelectorAll("aside input:not([type=file])").forEach((i) => (i.value = i.defaultValue));
     $("#customDot").style.background = $("#custom").value;
-    look = "studio"; backdrop = "none";
-    document.querySelectorAll("button[data-l], button[data-b]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.l === "studio" || x.dataset.b === "none"));
-    edge = "white"; document.querySelectorAll("#edges button").forEach((x) => x.setAttribute("aria-pressed", x.dataset.e === "white"));
+    look = DEF.look; backdrop = DEF.backdrop; edge = DEF.edge;
+    document.querySelectorAll("button[data-l], button[data-b]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.l === look || x.dataset.b === backdrop));
+    document.querySelectorAll("#edges button").forEach((x) => x.setAttribute("aria-pressed", x.dataset.e === edge));
     update();
   });
 
