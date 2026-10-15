@@ -1,0 +1,40 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400&display=block" rel="stylesheet">
+<style>
+  html,body{margin:0;background:#000}
+  .b{position:relative;width:1081px;height:1400px;background:#000;color:#f2f0ea;font-family:Lora,Georgia,serif;text-align:center;overflow:hidden}
+  .au{position:absolute;top:142px;left:0;right:0;font-size:27px}
+  h1{position:absolute;top:222px;left:110px;right:110px;margin:0;font-weight:400;font-size:62px;line-height:1.38;text-transform:uppercase;letter-spacing:.005em}
+  .em{position:absolute;left:0;right:0;font-size:21px}
+  .tx{position:absolute;left:286px;width:512px;text-align:left;font-size:16.6px;line-height:1.22}
+  .tx p{margin:0 0 20.5px}
+  .pub{position:absolute;left:0;right:0;font-size:35px;line-height:1.2}.pub small{display:block;font-size:24px}
+  img{position:absolute;display:block}
+</style></head><body><div class="b" id="b"></div>
+<script>
+const BOOKS = {
+  1: { title: "The Immoral Artist", st: [1, 6, 2], lines: [
+    "The artist is a force of change, so it's in society's perspective an immoral force, a push against tradition.",
+    "Societies, like species, survive by balancing an enormous amount of continuity with a very small - but extraordinary - amount of disruption.",
+    "Plato was wrong, and the disenfranchising of art by philosophy failed. Art is not a child to be disciplined by philosophy but a rebellious partner in the quest for truth.",
+    "Society, despite starving artists, keeps giving them poetic license. A license to betray. These perceived acts of betrayal are in a larger sense acts of loyalty to the evolution of society."] },
+  2: { title: "Art, Ritual and Pixel", st: [5, 8, 3], lines: [
+    "Ritual and pixel are opposite forces, one creates community and the other isolation.",
+    "The pixel is an anti-aura object, capable of draining the meaning of the ideas and artifacts around us.",
+    "Our minds are imitating the nature of the pixel creating a crisis of lingering."] },
+  3: { title: "The Poetics of Technology", st: [4, 9, 7], lines: [
+    "Technology determinism is wrong and the coming age of pixel hallucination is not inevitable.",
+    "The artist has a role, if they decide to take it, in creating new non-dystopian imaginaries for the future mediated by technology."] },
+};
+const k = new URLSearchParams(location.search).get("b"), B = BOOKS[k];
+const h1Lines = B.title.length > 22 ? 2 : 1, titleBottom = 222 + h1Lines * 86;
+const em = titleBottom + 60, tx = em + 82;
+document.getElementById("b").innerHTML = `
+  <div class="au">Edson Pavoni</div><h1>${B.title}</h1>
+  <div class="em" style="top:${em}px">❤️🌱</div>
+  <div class="tx" style="top:${tx}px">${B.lines.map((l) => `<p>${l}</p>`).join("")}</div>
+  <div class="pub" style="top:1155px">ARTLAB<small>by Rise</small></div>
+  <img src="st${B.st[0]}.png" style="left:807px;top:136px;width:76px">
+  <img src="st${B.st[1]}.png" style="left:767px;top:${tx + 165}px;width:64px">
+  <img src="st${B.st[2]}.png" style="left:161px;top:1253px;width:64px">`;
+</script></body></html>
