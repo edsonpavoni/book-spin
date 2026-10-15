@@ -68,7 +68,7 @@
       <legend>Books</legend>
       <div id="books"></div>
       <button class="add" id="addBook" type="button">+ Add a book</button>
-      <p class="note">Drop or click to replace an image; spine and back are optional. With more than one book, the book changes to the next one on the frame where only its pages face you. The demo: <em>Art in the Age of Pixel Hallucinations</em> and two mock covers from <em>Sacred in Flux</em>.</p>
+      <p class="note">Drop or click to replace an image; spine and back are optional. With more than one book, the book changes to the next one on the frame where only its pages face you. The demo: Edson Pavoni's three books, <em>The Immoral Artist</em>, <em>Art, Ritual and Pixel</em> and <em>The Poetics of Technology</em> (mock covers).</p>
     </fieldset>
 
     <div class="row">
@@ -149,9 +149,9 @@
   const DEF = { edge: "silver", look: "spotlight", backdrop: "none" };
   let edge = DEF.edge, look = DEF.look, backdrop = DEF.backdrop;
 
-  // the demo books until replaced: Art in the Age of Pixel Hallucinations (Edson Pavoni, 2025) and two mock covers
-  // from Sacred in Flux (Edson Pavoni & Ju Freire, 2022)
-  const demo = ["aph", "sif2", "sif3"].map((n) => ({ front: `demo/${n}-front.webp`, spine: `demo/${n}-spine.webp`, back: `demo/${n}-back.webp` }));
+  // the demo books until replaced: Edson Pavoni's three books (Oct 15, 2026 mock covers; fronts from Sacred in Flux,
+  // Edson Pavoni & Ju Freire, 2022): 1 The Immoral Artist · 2 Art, Ritual and Pixel · 3 The Poetics of Technology
+  const demo = ["book1", "book2", "book3"].map((n) => ({ front: `demo/${n}-front.webp`, spine: `demo/${n}-spine.webp`, back: `demo/${n}-back.webp` }));
   let books = demo.map((b) => ({ ...b }));
   const toData = async (url) => { const b = await (await fetch(url)).blob();
     return new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(b); }); };
