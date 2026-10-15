@@ -11,6 +11,7 @@
  * tilt      degrees the book leans onto its corner              default 35
  * camera    degrees the camera looks down                       default 10
  * speed     seconds per turn                                    default 6.6
+ * vary      0–1, speed variation: slower while a cover faces you, faster through the edges   default 0
  * shadow    0–1                                                 default 1
  * The background is transparent. The book fills the element's height; give the element a size.
  */
@@ -41,7 +42,7 @@
   });
 
   class BookSpin extends HTMLElement {
-    static get observedAttributes() { return ["front", "spine", "back", "pages", "paper", "trim", "edge", "gloss", "tilt", "camera", "speed", "shadow"]; }
+    static get observedAttributes() { return ["front", "spine", "back", "pages", "paper", "trim", "edge", "gloss", "tilt", "camera", "speed", "vary", "shadow"]; }
     constructor() { super(); this.attachShadow({ mode: "open" }); }
     connectedCallback() {
       this.ro = new ResizeObserver(() => this.render()); this.ro.observe(this);
@@ -83,6 +84,8 @@
       const LIGHT = norm([-0.35, -0.85, 0.4]);
       const HALF = norm(LIGHT.map((v, i) => v + [0, 0, 1][i]));
       const gloss = num(this, "gloss", 0.25), speed = num(this, "speed", 6.6), cam = num(this, "camera", 10), shadow = num(this, "shadow", 1);
+      const vary = Math.min(0.9, Math.max(0, num(this, "vary", 0)) * 0.9);
+      const angle = (t) => { const q = t * 2 * Math.PI; return q - (vary / 2) * Math.sin(2 * q); };   // turn at time t (0–1)
 
       // ---- light per face, baked into keyframes (book normal → tilt → turn; Lambert + one highlight) ----
       const faces = { front: [0, 0, 1], back: [0, 0, -1], spine: [-1, 0, 0], fore: [1, 0, 0], top: [0, -1, 0], bottom: [0, 1, 0] };
@@ -91,7 +94,7 @@
         let shade = "", hi = "";
         const rx = nx * c - ny * s, ry = nx * s + ny * c, rz = nz;
         for (let i = 0; i <= N; i++) {
-          const a = (i / N) * 2 * Math.PI, ca = Math.cos(a), sa = Math.sin(a);
+          const a = angle(i / N), ca = Math.cos(a), sa = Math.sin(a);
           const n = [rx * ca + rz * sa, ry, -rx * sa + rz * ca];
           const d = n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2];
           const h = Math.max(0, n[0] * HALF[0] + n[1] * HALF[1] + n[2] * HALF[2]);
@@ -132,7 +135,7 @@
           background:radial-gradient(closest-side,rgb(0 0 0 / ${0.4 * shadow}),transparent);filter:blur(${Math.max(1.5, big * 0.006).toFixed(1)}px)}
         .touch{position:absolute;left:${-touch}px;top:${-touch / 2.4}px;width:${touch * 2}px;height:${touch / 1.2}px;border-radius:50%;transform:rotateX(90deg);
           background:radial-gradient(closest-side,rgb(0 0 0 / ${0.75 * shadow}),transparent);filter:blur(1px)}
-        @keyframes turn{to{transform:rotateY(360deg)}}
+        @keyframes turn{${Array.from({ length: N + 1 }, (_, i) => `${(i / N * 100).toFixed(2)}%{transform:rotateY(${(angle(i / N) * 180 / Math.PI).toFixed(2)}deg)}`).join("")}}
         @media (prefers-reduced-motion:reduce){.turn,.f::before,.f::after{animation-play-state:paused;animation-delay:calc(var(--spin) * -0.1)}}
         ${keys}
         ${face("front", W, H, `translateZ(${T / 2}px)`, img(front, fc))}

@@ -97,6 +97,7 @@
       <label><span>Camera <b id="cameraV">10°</b></span><input type="range" id="camera" min="0" max="30" value="10"></label>
     </div>
     <div class="row">
+      <label><span>Speed variation <b id="varyV">0</b></span><input type="range" id="vary" min="0" max="1" step="0.05" value="0"></label>
       <label><span>Cover gloss</span><input type="range" id="gloss" min="0" max="1" step="0.05" value="0.25"></label>
       <label><span>Shadow <b id="shadowV">100%</b></span><input type="range" id="shadow" min="0" max="1" step="0.05" value="1"></label>
     </div>
@@ -178,13 +179,14 @@
 
   function attrs() {
     const a = { pages: $("#pages").value, edge: edge === "custom" ? $("#custom").value : edge, tilt: $("#tilt").value,
-      camera: $("#camera").value, speed: $("#speed").value, gloss: $("#gloss").value, shadow: $("#shadow").value };
+      camera: $("#camera").value, speed: $("#speed").value, vary: $("#vary").value, gloss: $("#gloss").value, shadow: $("#shadow").value };
     if ($("#paper").value !== "0.1") a.paper = $("#paper").value;
     if ($("#trim").value.trim()) a.trim = $("#trim").value.trim();
     return a;
   }
   let t;
   function update() {
+    $("#varyV").textContent = +$("#vary").value === 0 ? "steady" : Math.round($("#vary").value * 100) + "%";
     $("#shadowV").textContent = Math.round($("#shadow").value * 100) + "%";
     $("#tiltV").textContent = $("#tilt").value + "°"; $("#cameraV").textContent = $("#camera").value + "°";
     const mm = $("#pages").value / 2 * $("#paper").value + 0.6;
