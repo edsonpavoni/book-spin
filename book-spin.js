@@ -125,8 +125,9 @@
         .f::before,.f::after{content:"";position:absolute;inset:0;animation:x var(--spin) linear infinite}
         .f::before{background:#000}.f::after{background:#fff;mix-blend-mode:screen}
         .fw,.fn{position:absolute;display:block;border-radius:50%;transform:rotateX(90deg)}
-        .fw{left:${x0 - big * 0.04}px;width:${x1 - x0 + big * 0.08}px;top:${-D / 2}px;height:${D}px;background:#000;
-          filter:blur(${(big * 0.035).toFixed(1)}px);opacity:${0.22 * shadow}}
+        .fw{left:${x0 - big * 0.04}px;width:${x1 - x0 + big * 0.08}px;top:${-D / 2}px;height:${D}px;
+          background:radial-gradient(farthest-side at ${(big * 0.04 - x0).toFixed(1)}px 50%,#000,rgb(0 0 0 / .3) 25%,rgb(0 0 0 / .06) 60%,transparent);
+          filter:blur(${(big * 0.035).toFixed(1)}px);opacity:${0.3 * shadow}}
         .fn{left:${-big * 0.22}px;width:${big * 0.44}px;top:${-D / 3}px;height:${D / 1.5}px;
           background:radial-gradient(closest-side,rgb(0 0 0 / ${0.4 * shadow}),transparent);filter:blur(${Math.max(1.5, big * 0.006).toFixed(1)}px)}
         .touch{position:absolute;left:${-touch}px;top:${-touch / 2.4}px;width:${touch * 2}px;height:${touch / 1.2}px;border-radius:50%;transform:rotateX(90deg);
